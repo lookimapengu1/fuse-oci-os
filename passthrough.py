@@ -5,6 +5,7 @@ from __future__ import with_statement
 import os
 import sys
 import errno
+import oci_api as oci
 
 from fuse import FUSE, FuseOSError, Operations
 
@@ -40,7 +41,10 @@ class Passthrough(Operations):
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
     
-    def ls(self, path):
+    def readdir(self, path, fh):
+        print "hi"
+        temp = oci.ls_files('william-scotsmen-test')
+        return temp
     
     def rename(self, old, new):
         return os.rename(self._full_path(old), self._full_path(new))
@@ -77,7 +81,7 @@ class Passthrough(Operations):
 
     def fsync(self, path, fdatasync, fh):
         return self.flush(path, fh)
-    '''
+
  
 def main(mountpoint, root):
     FUSE(Passthrough(root), mountpoint, nothreads=True, foreground=True)

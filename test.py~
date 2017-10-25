@@ -1,0 +1,4 @@
+import oci_api
+
+temp = oci_api('william-scotsmen-test')
+print temp
