@@ -7,6 +7,9 @@ import httpsig_cffi.sign
 import requests
 import six
 
+from datetime import datetime as dt
+import time
+
 # Version 1.0.1
 
 class SignedRequestAuth(requests.auth.AuthBase):
@@ -89,15 +92,25 @@ class SignedRequestAuth(requests.auth.AuthBase):
 # ...
 # -----END RSA PRIVATE KEY-----
 def get_auth():
+    with open("/root/.oci/config") as cf:
+        config = cf.read()
+        lines = config.split("\n")
+        for l in lines:
+            fields = l.split("=")
+            if len(fields) > 1:
+                if fields[0] == 'user': uocid = fields[1]
+                elif fields[0] == 'fingerprint': fnpt = fields[1]
+                elif fields[0] == 'tenancy': tocid = fields[1]
+                elif fields[0] == 'key_file': kf = fields[1]
+                
 
-    with open("/root/.oci/sacrifice.pem") as f:
+    with open(kf) as f:
         private_key = f.read().strip()
-
     # This is the keyId for a key uploaded through the console
     api_key = "/".join([
-        "ocid1.tenancy.oc1..aaaaaaaa2ga2wc6bkwwayxq3vmjhjfieamxaxjudiciobpfk7zwcdoykus4q",
-        "ocid1.user.oc1..aaaaaaaawnwprfxu7rx2osz3zwpwlk5pg3ip4ua6igbtc4qle3pjhna3e2ja",
-        "a7:56:22:37:3e:a9:ad:cd:56:cd:e3:87:0a:54:35:8b"
+        tocid,
+        uocid,
+        fnpt
     ])
 
     auth = SignedRequestAuth(api_key, private_key)
@@ -113,12 +126,31 @@ def get_headers():
     }
     return headers
 
-def get_response(uri):
+def get_objects(uri):
     auth = get_auth()
     headers = get_headers()
+    #url = uri + "?compartmentId={compartmentId}"
+    #url = url.format(
+    #    compartmentId="ocid1.compartment.oc1..aaaaaaaapjubpc2gi5b3o7gxqbyyfww6bnuzsnyrjp6scns2zrw3b2kz2qbq"
+    #)
     #uri = "https://objectstorage.us-phoenix-1.oraclecloud.com/n/"
-    response = requests.get(uri, auth=auth, headers=headers)
-    #print(uri)
-    #print(response.request.headers["Authorization"])
-    return response
+    response = requests.get(uri, auth=auth, headers=headers).json()
+    print response["objects"]
+    #print response.headers
+    return response["objects"]
 
+def get_object_metadata(uri):
+    auth = get_auth()
+    headers = get_headers()
+    response = requests.get(uri, auth=auth, headers=headers)
+    tt = dt.strptime(response.headers['last-modified'][:-4], '%a, %d %b %Y %H:%M:%S')
+    tt = time.mktime(tt.timetuple())
+    res = {'size':int(response.headers['content-length']), 'lastmod':int(tt)}
+    print res
+    #print dt.microsecond(res['lastmod'])
+    return res
+
+def debug_message(m):
+    print "================"
+    print m
+    print "================"
